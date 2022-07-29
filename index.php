@@ -42,11 +42,6 @@ function retrieve(string $id, string $password): string {
         return '';
     }
 
-    if (!password_verify($password, $data['password'])) {
-        // invalid password
-        return '';
-    }
-
     return decrypt($password, $data['content']);
 }
 
@@ -107,13 +102,10 @@ function persist(
     string $password,
     int $expiry = null
 ): string {
-    $id       = uuid_create();
-    $content  = encrypt($password, $content);
-    $password = password_hash($password,  PASSWORD_BCRYPT);
+    $id = uuid_create();
 
     $was_successful = redis()->setex("sk:$id", $expiry ?? 30, json_encode([
-        'content' => $content,
-        'password' => $password,
+        'content' => encrypt($password, $content),
     ]));
 
     if (!$was_successful) {
@@ -185,8 +177,10 @@ function form(): never
         notFound();
     }
 
+    $token = csrfToken();
     echo layout(<<<FORM
 <form method="POST" action="/u/$id" class="mt-3">
+    <input type="hidden" name="token" value="$token" />
     <div class="mb-3">
         <label for="password" class="form-label">Password</label>
         <input type="text" class="form-control" id="password" name="password" aria-describedby="passwordHelp" minlength="8" maxlength="100" required>
@@ -205,6 +199,9 @@ FORM);
  */
 function unlock(): never
 {
+    checkThrottle();
+    checkCsrf();
+
     $password = filter_input(INPUT_POST, 'password');
     $id = getUriSegments()[1] ?? null;
 
@@ -229,11 +226,13 @@ function unlock(): never
  */
 function create(): never
 {
+    $token = csrfToken();
     echo layout(<<<FORM
 <form method="POST" action="/c" class="mt-3">
+    <input type="hidden" name="token" value="$token" />
     <div class="mb-3">
         <label for="content" class="form-label">The Secret Content!</label>
-        <textarea class="form-control" id="content" name="content" rows="3"></textarea>
+        <textarea class="form-control" id="content" name="content" rows="3" required></textarea>
     </div>
     <div class="mb-3">
         <label for="password" class="form-label">Password</label>
@@ -252,6 +251,9 @@ FORM);
  */
 function store(): never
 {
+    checkThrottle();
+    checkCsrf();
+
     $content  = htmlspecialchars(filter_input(INPUT_POST, 'content'));
     $password = filter_input(INPUT_POST, 'password');
     $expiry   = filter_input(INPUT_POST, 'expiry', FILTER_SANITIZE_NUMBER_INT) ?: null;
@@ -270,6 +272,74 @@ function store(): never
 <p class="mt-3">$host/u/$id</p>
 SECRET);
     die;
+}
+
+/**
+ * Get/generate the CSRF token
+ * @return string
+ * @throws Exception
+ */
+function csrfToken(): string
+{
+    if (empty($_SESSION['token'])) {
+        $_SESSION['token'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['token'];
+}
+
+/**
+ * Check CSRF token validity
+ * @return void
+ */
+function checkCsrf(): void
+{
+    $token = filter_input(INPUT_POST, 'token');
+
+    // CSRF token check
+    if (!hash_equals($_SESSION['token'], $token)) {
+        redirect('/c');
+    }
+}
+
+/**
+ * Check throttle limit, if exceed redirect to the home page
+ * @return void
+ */
+function checkThrottle(): void
+{
+    $ip = getIp();
+
+    if (!$ip) {
+        redirect('/');
+    }
+
+    $key = "throttle:$ip";
+
+    $attempts = redis()->get($key);
+    if (!$attempts) {
+        redis()->incr($key);
+        redis()->expire($key, 30);
+        return;
+    } elseif ($attempts >= 5) {
+        redirect('/');
+    }
+
+    redis()->incr($key);
+}
+
+/**
+ * Get the client IP address
+ * @return string
+ */
+function getIp(): string
+{
+    if (!empty($_SERVER['HTTP_CLIENT_IP'])) {
+        $ip = $_SERVER['HTTP_CLIENT_IP'];
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+    }
+    return $ip ?? $_SERVER['REMOTE_ADDR'] ?? '';
 }
 
 /**
@@ -306,6 +376,7 @@ function getUriSegments(): array
     );
 }
 
+session_start();
 $path = getUriSegments()[0] ?: '/';
 
 switch($_SERVER['REQUEST_METHOD'] ?? null) {
