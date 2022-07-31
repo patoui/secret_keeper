@@ -42,6 +42,8 @@ function redis(): Redis
     global $is_dev;
     if ($is_dev) {
         $redis->connect('redis');
+    } else {
+        $redis->connect('127.0.0.1', 6379);
     }
 
     return $redis;
