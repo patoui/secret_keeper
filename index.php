@@ -2,6 +2,21 @@
 
 declare(strict_types=1);
 
+mb_internal_encoding('UTF-8');
+mb_http_output('UTF-8');
+
+if (($_SERVER['HTTP_HOST'] ?? '') === 'localhost') {
+    ini_set('display_errors', 'On');
+    ini_set('display_startup_errors', 'On');
+    error_reporting(-1);
+    ini_set('log_errors', 'On');
+} else {
+    ini_set('display_errors', 'Off');
+    ini_set('display_startup_errors', 'Off');
+    error_reporting(E_ALL);
+    ini_set('log_errors', 'On');
+}
+
 /**
  * Tested with PHP 8.1
  * Required extensions: redis, uuid, openssl
