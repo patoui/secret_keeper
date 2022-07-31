@@ -100,11 +100,11 @@ function decrypt(string $key, string $encrypted_message): string
 function persist(
     string $content,
     string $password,
-    int $expiry = null
+    int $expiry
 ): string {
     $id = uuid_create();
 
-    $was_successful = redis()->setex("sk:$id", $expiry ?? 30, json_encode([
+    $was_successful = redis()->setex("sk:$id", $expiry, json_encode([
         'content' => encrypt($password, $content),
     ]));
 
@@ -232,14 +232,31 @@ function create(): never
     <input type="hidden" name="token" value="$token" />
     <div class="mb-3">
         <label for="content" class="form-label">The Secret Content!</label>
-        <textarea class="form-control" id="content" name="content" rows="3" required></textarea>
+        <textarea class="form-control" id="content" name="content" rows="3" minlength="3" maxlength="1000" required></textarea>
+        <div id="contentHelp" class="form-text">Minimum 3 and maximum of 1000 characters.</div>
     </div>
     <div class="mb-3">
         <label for="password" class="form-label">Password</label>
         <input type="text" class="form-control" id="password" name="password" minlength="8" maxlength="100" required>
+        <div id="passwordHelp" class="form-text">Minimum 8 and maximum of 100 characters.</div>
+    </div>
+    <div class="mb-3">
+        <label for="expiry" class="form-label">Expires In (seconds)</label>
+        <input type="number" class="form-control" id="expiry" name="expiry" value="86400" min="10" max="604800" required>
+        <div id="expiryHelp" class="form-text">Number of seconds which the secret will expire. Minimum 10 seconds and maximum of 604800 seconds (7 days).</div>
+        <button type="button" data-expiry="3600" class="expiry-helpers btn btn-secondary btn-sm">1 hour</button>
+        <button type="button" data-expiry="86400" class="expiry-helpers btn btn-secondary btn-sm">1 day</button>
+        <button type="button" data-expiry="604800" class="expiry-helpers btn btn-secondary btn-sm">7 days</button>
     </div>
     <button type="submit" class="btn btn-primary">Create!</button>
 </form>
+<script>
+document.querySelectorAll('.expiry-helpers').forEach(el => {
+    el.addEventListener('click', ev => {
+        document.querySelector('#expiry').value = ev.target.dataset.expiry;
+    });
+});
+</script>
 FORM);
     die;
 }
@@ -256,11 +273,14 @@ function store(): never
 
     $content  = htmlspecialchars(filter_input(INPUT_POST, 'content'));
     $password = filter_input(INPUT_POST, 'password');
-    $expiry   = filter_input(INPUT_POST, 'expiry', FILTER_SANITIZE_NUMBER_INT) ?: null;
+    $expiry   = (int) filter_input(INPUT_POST, 'expiry', FILTER_SANITIZE_NUMBER_INT, FILTER_VALIDATE_INT);
 
     if (
         !$content
         || !$password
+        || !$expiry
+        || $expiry < 10
+        || $expiry > 604800
         || !($id = persist($content, $password, $expiry))) {
         redirect('/c');
     }
