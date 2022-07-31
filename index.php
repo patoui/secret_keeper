@@ -205,7 +205,7 @@ function form(): never
     <input type="hidden" name="token" value="$token" />
     <div class="mb-3">
         <label for="password" class="form-label">Password</label>
-        <input type="text" class="form-control" id="password" name="password" aria-describedby="passwordHelp" minlength="8" maxlength="100" required>
+        <input type="password" class="form-control" id="password" name="password" aria-describedby="passwordHelp" minlength="8" maxlength="100" required>
         <div id="passwordHelp" class="form-text">The password should have been shared with the link.</div>
     </div>
     <button type="submit" class="btn btn-primary">Unlock!</button>
@@ -259,12 +259,12 @@ function create(): never
     </div>
     <div class="mb-3">
         <label for="password" class="form-label">Password</label>
-        <input type="text" class="form-control" id="password" name="password" minlength="8" maxlength="100" required>
+        <input type="password" class="form-control" id="password" name="password" minlength="8" maxlength="100" required>
         <div id="passwordHelp" class="form-text">Minimum 8 and maximum of 100 characters.</div>
     </div>
     <div class="mb-3">
         <label for="expiry" class="form-label">Expires In (seconds)</label>
-        <input type="number" class="form-control" id="expiry" name="expiry" value="86400" min="10" max="604800" required>
+        <input type="number" class="form-control" id="expiry" name="expiry" value="3600" min="10" max="604800" required>
         <div id="expiryHelp" class="form-text">Number of seconds which the secret will expire. Minimum 10 seconds and maximum of 604800 seconds (7 days).</div>
         <button type="button" data-expiry="3600" class="expiry-helpers btn btn-secondary btn-sm">1 hour</button>
         <button type="button" data-expiry="86400" class="expiry-helpers btn btn-secondary btn-sm">1 day</button>
@@ -307,11 +307,33 @@ function store(): never
         redirect('/c');
     }
 
+    global $is_dev;
     $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+    $link = sprintf(
+        '%s://%s/u/%s',
+        $is_dev ? 'http' : 'https',
+        $host,
+        $id
+    );
     echo layout(<<<SECRET
 <p class="mt-5">Your secret link is:</p>
-<a href="//$host/u/$id">$host/u/$id</a>
-<p class="mt-3">$host/u/$id</p>
+<a href="$link">$link</a>
+<p id="link" class="mt-3">$link</p>
+<button id="copy_link" type="button" class="btn btn-primary">Copy link!</button>
+<script>
+document.querySelector("#copy_link").addEventListener('click', ev => {
+    const r = document.createRange();
+    r.selectNode(document.getElementById("link"));
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(r);
+    document.execCommand('copy');
+    window.getSelection().removeAllRanges();
+    ev.target.innerText = "Link copied!";
+    setTimeout(() => {
+      ev.target.innerText = "Copy link!";
+    }, 1000);
+});
+</script>
 SECRET);
     die;
 }
