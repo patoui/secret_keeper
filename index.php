@@ -5,7 +5,9 @@ declare(strict_types=1);
 mb_internal_encoding('UTF-8');
 mb_http_output('UTF-8');
 
-if (($_SERVER['HTTP_HOST'] ?? '') === 'localhost') {
+$is_dev = ($_SERVER['HTTP_HOST'] ?? '') === 'localhost';
+
+if ($is_dev) {
     ini_set('display_errors', 'On');
     ini_set('display_startup_errors', 'On');
     error_reporting(-1);
@@ -37,7 +39,10 @@ function redis(): Redis
     }
 
     $redis = new Redis();
-    $redis->connect('redis');
+    global $is_dev;
+    if ($is_dev) {
+        $redis->connect('redis');
+    }
 
     return $redis;
 }
