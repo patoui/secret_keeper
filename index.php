@@ -75,10 +75,10 @@ function retrieve(string $id, string $password): string {
  */
 function encrypt(string $key, string $content): string
 {
-	$ivlen = openssl_cipher_iv_length(CIPHER);
-	$iv = openssl_random_pseudo_bytes($ivlen);
-	$ciphertext = openssl_encrypt($content, CIPHER, $key, 0, $iv);
-	return base64_encode($iv.$ciphertext);
+    $ivlen = openssl_cipher_iv_length(CIPHER);
+    $iv = openssl_random_pseudo_bytes($ivlen);
+    $ciphertext = openssl_encrypt($content, CIPHER, $key, 0, $iv);
+    return base64_encode($iv.$ciphertext);
 }
 
 /**
@@ -95,20 +95,20 @@ function decrypt(string $key, string $encrypted_message): string
         return '';
     }
 
-	// get the length of the initialization vector
-	$ivlen = openssl_cipher_iv_length(CIPHER);
+    // get the length of the initialization vector
+    $ivlen = openssl_cipher_iv_length(CIPHER);
 
-	// extract initialization vector from encrypted message
-	$iv = substr($encrypted_message, 0, $ivlen);
+    // extract initialization vector from encrypted message
+    $iv = substr($encrypted_message, 0, $ivlen);
 
-	// remove initialization vector from encrypted message
-	$encrypted_message = substr($encrypted_message, $ivlen);
+    // remove initialization vector from encrypted message
+    $encrypted_message = substr($encrypted_message, $ivlen);
 
     if ($decrypted_message = openssl_decrypt($encrypted_message, CIPHER, $key, 0, $iv)) {
         return $decrypted_message;
     }
 
-	return '';
+    return '';
 }
 
 /**
