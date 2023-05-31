@@ -168,6 +168,11 @@ function layout(string $content): string
                 $content
             </div>
         </div>
+        <div class="row mt-5">
+            <div class="col">
+                <p class="text-muted">View the source code <a href="https://github.com/patoui/secret_keeper">here</a></p>
+            </div>
+        </div>
     </div>
   </body>
 </html>
