@@ -20,7 +20,7 @@ if ($is_dev) {
 }
 
 /**
- * Tested with PHP 8.1
+ * Tested with PHP 8.1 and 8.2
  * Required extensions: redis, uuid, openssl
  */
 
