@@ -3,8 +3,8 @@ Secret Keeper is a service to generate expiring password protected links contain
 
 ## Requirements
 
-PHP 8.1 or greater
-PHP's mbstring extension
-PHP's openssl extension
-PHP's redis extension
-PHP's uuid extension
+- PHP 8.1 or greater
+- `mbstring` extension
+- `openssl` extension
+- `redis` extension
+- `uuid` extension
